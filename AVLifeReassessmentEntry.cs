@@ -309,10 +309,59 @@ namespace PPSAAssetValidation
             if (line == null) return;
         }
 
+        protected virtual void AVLifeReassessmentLine_RowSelecting(PXCache cache, PXRowSelectingEventArgs e)
+        {
+            AVLifeReassessmentLine line = (AVLifeReassessmentLine)e.Row;
+            if (line == null) return;
+
+            // Check if current user is an approver for this line
+            // This is populated by checking if user is in the WorkgroupID
+            if (line.WorkgroupID.HasValue)
+            {
+                var userID = PXAccess.GetUserID();
+                var workgroupMembers = PXSelectReadonly<EPCompanyTreeMember,
+                    Where<EPCompanyTreeMember.workGroupID, Equal<Required<EPCompanyTreeMember.workGroupID>>,
+                        And<EPCompanyTreeMember.userID, Equal<Required<EPCompanyTreeMember.userID>>>>>.Select(this, line.WorkgroupID, userID);
+                
+                line.IsApprover = workgroupMembers.Count > 0;
+            }
+        }
+
+        protected virtual void AVLifeReassessmentLine_FieldUpdated(PXCache cache, PXFieldUpdatedEventArgs e)
+        {
+            AVLifeReassessmentLine line = (AVLifeReassessmentLine)e.Row;
+            if (line == null) return;
+
+            // When Hold is unchecked (submitted for approval), set status to pending
+            if (e.ExternalCall && e.OldValue != null && (bool)e.OldValue == true && line.Hold == false)
+            {
+                // Taking off hold - move to pending approval
+                // Status updates will be handled by EPApprovalAutomation
+            }
+
+            // When Hold is checked, reset approval flags
+            if (e.ExternalCall && line.Hold == true)
+            {
+                line.Approved = false;
+                line.Rejected = false;
+            }
+        }
+
         protected virtual void AVLifeReassessmentLine_RowPersisting(PXCache cache, PXRowPersistingEventArgs e)
         {
             // Prevent automatic row persistence - let Persist() handle the updates
             e.Cancel = true;
+        }
+
+        protected virtual void EPApproval_RowInserting(PXCache cache, PXRowInsertingEventArgs e)
+        {
+            // This event is called when an approval record is created
+            // Set additional information on the approval for the approver
+            var approval = (EPApproval)e.Row;
+            if (approval == null) return;
+
+            // The RefNoteID links back to the source record being approved
+            // Additional fields can be populated here if needed
         }
 
         #endregion

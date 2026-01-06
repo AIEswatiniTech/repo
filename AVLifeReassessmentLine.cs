@@ -214,6 +214,14 @@ namespace PPSAAssetValidation
         public virtual int? WorkgroupID { get; set; }
         public abstract class workgroupID : PX.Data.BQL.BqlInt.Field<workgroupID> { }
         #endregion
+
+        #region IsApprover
+        [PXBool]
+        [PXUIField(DisplayName = "Is Approver", Enabled = false)]
+        [PXDefault(false)]
+        public virtual bool? IsApprover { get; set; }
+        public abstract class isApprover : PX.Data.BQL.BqlBool.Field<isApprover> { }
+        #endregion
               
     }
 }
